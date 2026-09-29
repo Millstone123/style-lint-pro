@@ -1,0 +1,8 @@
+body {
+    font-family: sans-serif;
+    color: var(--primary);
+}
+
+.highlight {
+    background-color: var(--secondary);
+}
