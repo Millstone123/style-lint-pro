@@ -5,6 +5,7 @@ setup(
     version="1.0.0",
     description="Advanced CSS/SCSS linter for deterministic style metadata",
     packages=["style_lint"],
+    package_data={"style_lint": ["*.json"]},
     python_requires=">=3.8",
     install_requires=["style-profile>=5.0.0"],
 )
