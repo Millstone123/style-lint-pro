@@ -1,1 +1,2 @@
 pytest>=7.0
+style-profile @ https://github.com/Millstone123/code-style-profiles/releases/download/v5.0.0/style_profile-5.0.0-py3-none-any.whl
